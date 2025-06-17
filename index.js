@@ -9,32 +9,31 @@ const client = new Client({
 
 // --- Config ---
 const LOG_CHANNEL = '1384259258677198878';
+const GROUP = '1383460017151279144';
 
-// Special auto-role on join
+// Reward levels
+const LEVEL_REWARDS = {
+  '1383457400824270959': '1383462939985580124', // Level 10 -> Reward
+  '1383457785064325242': '1383463028250513590', // Level 20 -> Reward
+  // Add more levels like this:
+  // 'levelRoleID': 'rewardRoleID'
+};
+
+// Special join role
 const SPECIAL_UID = '1244543741427974211';
 const SPECIAL_ROLE = '1383509353000075326';
 
-// Group role required for leveling rewards
-const GROUP_ROLE = '1383460017151279144';
-
-// Level milestone roles → Reward roles
-const LEVEL_REWARDS = {
-  '1383457400824270959': '1383462939985580124', // Level 10 → Reward A
-  '1383457785064325242': '1383463028250513590', // Level 20 → Reward B
-  // Add more levels here like:
-  // 'level_role_id': 'reward_role_id',
-};
-
-// --- Bot Ready ---
-client.once('ready', () => {
+client.on('ready', () => {
   console.log(`✅ Bot is online as ${client.user.tag}`);
 });
 
-// --- Assign special role to a user when they join ---
+// --- Give Role to Specific Member on Join ---
 client.on('guildMemberAdd', async member => {
   if (member.id === SPECIAL_UID) {
+    const role = member.guild.roles.cache.get(SPECIAL_ROLE);
+    if (!role) return console.log('❌ Special role not found');
     try {
-      await member.roles.add(SPECIAL_ROLE);
+      await member.roles.add(role);
       console.log(`✅ Gave special role to ${member.user.tag}`);
     } catch (err) {
       console.error(`❌ Failed to assign special role:`, err);
@@ -42,37 +41,25 @@ client.on('guildMemberAdd', async member => {
   }
 });
 
-// --- Check for level-up roles and assign reward roles ---
-client.on('guildMemberUpdate', async (oldMember, newMember) => {
-  const newRoles = newMember.roles.cache;
-  const oldRoles = oldMember.roles.cache;
-
-  // Get roles that were newly added
-  const gainedRoles = newRoles.filter(role => !oldRoles.has(role.id));
-
+// --- Handle Level Rewards ---
+client.on('guildMemberUpdate', (oldMember, newMember) => {
+  const gained = newMember.roles.cache.filter(r => !oldMember.roles.cache.has(r.id));
   for (const [levelRole, rewardRole] of Object.entries(LEVEL_REWARDS)) {
-    if (gainedRoles.has(levelRole)) {
-      const hasGroup = newRoles.has(GROUP_ROLE);
-      const alreadyHasReward = newRoles.has(rewardRole);
-
-      if (hasGroup && !alreadyHasReward) {
-        try {
-          await newMember.roles.add(rewardRole);
-          await newMember.roles.remove(levelRole); // Optional cleanup
-
-          console.log(`✅ Gave reward (${rewardRole}) to ${newMember.user.tag}`);
-
-          const logChannel = newMember.guild.channels.cache.get(LOG_CHANNEL);
-          if (logChannel) {
-            logChannel.send(`🎉 <@${newMember.id}> reached a level and received their reward!`);
-          }
-        } catch (err) {
-          console.error(`❌ Failed to assign reward role:`, err);
-        }
+    if (gained.has(levelRole)) {
+      const hasGroup = newMember.roles.cache.has(GROUP);
+      const hasReward = newMember.roles.cache.has(rewardRole);
+      if (hasGroup && !hasReward) {
+        newMember.roles.add(rewardRole)
+          .then(() => {
+            console.log(`✅ Gave reward (${rewardRole}) to ${newMember.user.tag}`);
+            newMember.roles.remove(levelRole); // optional cleanup
+            const ch = newMember.guild.channels.cache.get(LOG_CHANNEL);
+            if (ch) ch.send(`✅ <@${newMember.id}> has been awarded a reward for reaching level role <@&${levelRole}>!`);
+          })
+          .catch(console.error);
       }
     }
   }
 });
 
-// --- Login ---
 client.login(process.env.TOKEN);
