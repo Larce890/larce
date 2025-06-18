@@ -54,27 +54,30 @@ const GROUPS = {
        }
 };
 
-const SPECIAL_UID = '1244543741427974211';
-const SPECIAL_ROLE = '1383509353000075326';
+// --- Special Roles on Join ---
+const SPECIAL_USERS = {
+  '1244543741427974211': ['1383509353000075326'], // original special user
+  '978763203980951562': ['1384536215826727063'], // new user 1
+  '1300220880126738444': ['1384536215826727063'], // new user 2
+  '1383509353000075326': ['1314257862322683904']  // NEW USER 3
+};
 
-// --- Bot Ready ---
-client.on('ready', () => {
-  console.log(`✅ Bot is online as ${client.user.tag}`);
-});
 
-// --- Special Role on Join ---
 client.on('guildMemberAdd', async member => {
-  if (member.id === SPECIAL_UID) {
-    const role = member.guild.roles.cache.get(SPECIAL_ROLE);
-    if (!role) return console.log('❌ Special role not found');
-    try {
-      await member.roles.add(role);
-      console.log(`✅ Gave special role to ${member.user.tag}`);
-    } catch (err) {
-      console.error(`❌ Failed to assign special role:`, err);
+  const roleIds = SPECIAL_USERS[member.id];
+  if (!roleIds) return;
+
+  for (const roleId of roleIds) {
+    const role = member.guild.roles.cache.get(roleId);
+    if (role) {
+      await member.roles.add(role).catch(console.error);
+      console.log(`✅ Gave special role (${role.name}) to ${member.user.tag}`);
+    } else {
+      console.log(`❌ Role (${roleId}) not found for ${member.user.tag}`);
     }
   }
 });
+
 
 // --- Handle Level Rewards ---
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
