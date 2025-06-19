@@ -104,7 +104,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
       if (gained.has(levelRole) && !newMember.roles.cache.has(rewardRole)) {
         await newMember.roles.add(rewardRole).catch(console.error);
         console.log(`✅ Gave reward (${rewardRole}) to ${newMember.user.tag}`);
-        await newMember.roles.remove(levelRole).catch(console.error);
         const ch = newMember.guild.channels.cache.get(LOG_CHANNEL);
         if (ch) ch.send(`✅ <@${newMember.id}> has been awarded the role **${newMember.guild.roles.cache.get(rewardRole)?.name || "a reward role"}**!`);
 
